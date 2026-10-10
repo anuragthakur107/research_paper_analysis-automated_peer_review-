@@ -1,212 +1,162 @@
-# Causalith — Research Paper Analysis & Discovery Graph
+# Automated Peer Review System — Research Analysis & Discovery Graph
 
-> An AI-powered research analysis platform that extracts claims from academic papers, examines their supporting evidence, and connects related findings in a Neo4j knowledge graph to help surface potential research connections and new directions.
-
-**Live website:** [causalith.com](https://www.causalith.com/)
-
-<!-- Replace these paths with screenshots from the live application. Add image files to docs/images/. -->
-<p align="center">
-  <img src="docs/images/dashboard.png" alt="Causalith dashboard" width="90%">
-</p>
-
-<p align="center">
-  <em>Research interface preview — replace this placeholder with a real application screenshot.</em>
-</p>
+An AI-powered research paper analysis system that automates academic review, evaluates research claims, verifies citations, and explores relationships between findings using knowledge graphs.
 
 ## Overview
 
-Research papers are difficult to compare at scale: important claims are spread across sections, evidence is described in different ways, and relationships between papers can be hard to see. Causalith is designed to turn paper-level reading into a connected view of the literature.
+Research papers contain valuable claims, evidence, and insights, but discovering connections across multiple papers can be challenging. This project combines multi-agent AI workflows and graph-based knowledge representation to support systematic research analysis.
 
-The workflow focuses on **claims, evidence, relationships, and discovery**:
+The system analyses research papers, evaluates their claims, checks citations and formatting, and generates structured review reports. Its discovery-oriented approach focuses on connecting related claims across papers to identify potential research directions, supporting evidence, and possible contradictions.
 
-1. Ingest a research paper and identify its important claims.
-2. Analyse claims in context and connect them with relevant papers or evidence.
-3. Represent papers, claims, and their relationships as nodes and edges in a Neo4j graph.
-4. Explore connected findings to identify supporting, overlapping, conflicting, or potentially novel relationships.
-5. Present the analysis in a structured, graph-oriented view to support further investigation.
+## Key Features
 
-> **Important:** A graph connection is a lead for investigation, not proof that a scientific discovery is new or correct. Novelty and scientific validity require checking the original sources and relevant literature.
+- **Automated Peer Review:** Evaluates research papers using specialized AI review components.
+- **Research Claim Analysis:** Extracts and analyses claims to understand their context and relevance.
+- **Citation Verification:** Cross-checks references using scholarly sources such as arXiv and Google Scholar, where configured.
+- **Formatting Compliance:** Checks research paper formatting against configured academic standards.
+- **Multi-Agent Workflow:** Uses LangGraph to coordinate separate review components.
+- **Parallel Processing:** Executes independent review tasks concurrently to improve processing efficiency.
+- **Knowledge Graph Exploration:** Uses Neo4j to represent research papers, claims, concepts, and their relationships, where configured.
+- **Potential Discovery Identification:** Helps explore connections, conflicting claims, research gaps, and hypotheses that may deserve further investigation.
+- **Structured Reports:** Combines analysis results into an organised review report with scores and findings.
 
-## Key capabilities
+## How It Works
 
-- **Claim-focused paper analysis** — break papers into meaningful claims rather than treating each paper as a single document.
-- **Evidence and citation checking** — use available scholarly metadata and source context to help assess claims and references.
-- **Cross-paper connections** — relate claims that discuss similar concepts, methods, findings, or research questions.
-- **Knowledge graph with Neo4j** — model papers, claims, concepts, and their relationships as graph nodes and edges.
-- **Discovery-oriented exploration** — use graph paths and connected claims to spot patterns, research gaps, possible contradictions, and hypotheses worth checking.
-- **Structured review workflow** — organise analysis into distinct stages such as ingestion, review, fact-checking, scoring, aggregation, formatting, and report generation.
+1. **Paper Ingestion:** A research paper is submitted for analysis.
+2. **Claim and Content Analysis:** The system processes the paper and identifies relevant claims.
+3. **Citation Verification:** References are checked against available scholarly metadata.
+4. **Academic Review:** The paper is evaluated for research quality and supporting evidence.
+5. **Formatting Validation:** The system checks formatting compliance.
+6. **Parallel Execution:** Independent review components can run concurrently.
+7. **Result Aggregation:** Outputs from the review components are combined.
+8. **Graph-Based Exploration:** Related claims and concepts can be connected in a Neo4j knowledge graph.
+9. **Report Generation:** The system produces a structured summary of review findings.
 
-## How it works
+## Research Discovery Through Knowledge Graphs
 
-```mermaid
-flowchart TD
-    A[Research paper / PDF] --> B[Ingestion and parsing]
-    B --> C[Claim extraction and contextual analysis]
-    C --> D[Evidence and citation checks]
-    D --> E[Connect claims across papers]
-    E --> F[Build or update Neo4j graph]
-    F --> G[Explore graph paths and relationships]
-    G --> H[Potential discoveries and research leads]
-    H --> I[Structured analysis / review report]
-```
+The goal of graph-based analysis is to move beyond reviewing papers individually and help researchers explore relationships across the literature.
 
-The exact stages and integrations depend on the configured application and available sources.
+A conceptual graph may represent:
 
-## Exploring discoveries through a graph
+- **Paper nodes:** Research papers and their metadata.
+- **Claim nodes:** Findings, hypotheses, and statements extracted from papers.
+- **Concept nodes:** Topics, methods, and scientific concepts.
+- **Evidence relationships:** Links between claims and their supporting sources.
+- **Cross-paper relationships:** Connections between similar, supporting, or potentially conflicting claims.
 
-A paper is not just a document node. Its claims can be represented individually and connected to concepts, evidence, and other claims.
+By exploring paths through connected claims, researchers can investigate:
 
-Example conceptual graph:
+- Whether different papers support similar conclusions.
+- Which findings appear to conflict or require further verification.
+- How ideas and methods connect across research areas.
+- Which relationships may suggest new research questions or experiments.
 
-```mermaid
-flowchart LR
-    P1[Paper A] -->|CONTAINS| C1[Claim A]
-    P2[Paper B] -->|CONTAINS| C2[Claim B]
-    C1 -->|RELATES_TO| C2
-    C1 -->|SUPPORTED_BY| E1[Evidence / citation]
-    C2 -->|CONTRADICTED_BY or QUALIFIED_BY| E2[Evidence / citation]
-    C1 -->|ABOUT| T1[Research concept]
-    C2 -->|ABOUT| T1
-```
+These connections are intended to support further investigation. A graph relationship alone does not establish scientific validity or prove that a discovery is novel.
 
-Possible relationship types include `CONTAINS`, `SUPPORTS`, `CONTRADICTS`, `RELATES_TO`, `CITES`, and `ABOUT`. Treat these as an illustrative schema: use only relationship types actually implemented by the application.
+## Technology Stack
 
-By following graph paths across multiple papers, a researcher can investigate questions such as:
+- **Language:** Python
+- **AI Workflow Orchestration:** LangGraph, LangChain
+- **Backend:** FastAPI
+- **LLM:** Groq API
+- **Research Sources:** arXiv API, Google Scholar integration where configured
+- **Knowledge Graph:** Neo4j
+- **Semantic Retrieval:** Vector database, depending on configuration
+- **Frontend:** HTML, CSS, JavaScript
 
-- Which claims support or qualify a particular finding?
-- Do different papers reach similar conclusions using different methods?
-- Are there claims that appear to conflict, and what evidence explains the difference?
-- Which concepts connect otherwise separate research areas?
-- What untested relationship could motivate a follow-up experiment?
-
-The system should present these as **candidate connections or hypotheses**, with traceable source references, rather than asserting novelty without verification.
-
-<p align="center">
-  <img src="docs/images/knowledge-graph.png" alt="Neo4j claim and paper knowledge graph" width="90%">
-</p>
-
-<p align="center">
-  <em>Knowledge graph screenshot placeholder — replace with a real graph visualization.</em>
-</p>
-
-## Technology stack
-
-Based on the project's documented stack and current project structure:
-
-- **Python** — analysis and workflow logic
-- **LangGraph / LangChain** — orchestration of multi-stage or agent-based analysis
-- **FastAPI** — backend API
-- **Groq LLM** — language-model inference
-- **arXiv API / Google Scholar** — scholarly discovery and citation metadata, where configured
-- **Vector database** — semantic similarity and retrieval, depending on the configured backend
-- **Neo4j** — graph representation of claims, papers, concepts, and relationships
-- **HTML, CSS, JavaScript** — web interface
-
-Confirm each dependency against the current code and environment before treating this list as an exact deployment specification.
-
-## Repository structure
+## Project Structure
 
 ```text
 automated peer review/
 ├── backend/
-│   ├── main.py                 # FastAPI application entry point
-│   ├── graph.py                # Workflow / graph orchestration
-│   ├── requirements.txt        # Python dependencies
-│   ├── nodes/
-│   │   ├── ingestion.py        # Paper ingestion
-│   │   ├── reviewer.py         # Academic review
-│   │   ├── fact_checker.py     # Claim / citation checks
-│   │   ├── scoring.py          # Review scoring
-│   │   ├── aggregator.py       # Combine node results
-│   │   ├── formatter.py        # Format structured output
-│   │   └── report.py           # Report generation
-│   └── README.MD
+│   ├── main.py
+│   ├── graph.py
+│   ├── requirements.txt
+│   ├── README.MD
+│   └── nodes/
+│       ├── ingestion.py
+│       ├── reviewer.py
+│       ├── fact_checker.py
+│       ├── scoring.py
+│       ├── aggregator.py
+│       ├── formatter.py
+│       └── report.py
 ├── frontend/
-│   └── index.html              # Frontend entry point
+│   └── index.html
 ├── docs/
-│   └── images/                 # Add application screenshots here
+│   └── images/
 └── .gitignore
 ```
 
-## Run locally
+## Getting Started
 
-These are the general steps for the checked-in Python/HTML project. Adjust commands if the backend README specifies a different startup command or required services.
-
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/anuragthakur107/repo-analyzer-git_inspect-.git
-cd "automated peer review"
+git clone https://github.com/anuragthakur107/research_paper_analysis-automated_peer_review-.git
+cd research_paper_analysis-automated_peer_review-
 ```
 
-If you cloned into a different directory name, `cd` into that directory instead.
+### 2. Create a Virtual Environment
 
-### 2. Create and activate a virtual environment
-
-**Windows PowerShell**
+On Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install backend dependencies
+### 3. Install Dependencies
 
 ```powershell
 pip install -r backend/requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Configure Environment Variables
 
-Create `backend/.env` locally and add the credentials and service settings required by your implementation (for example, an LLM API key or scholarly API settings).
+Create a `backend/.env` file containing the API credentials and configuration required by the application.
 
-- Never commit `.env` or API keys.
-- Keep `.env.example` limited to variable names and safe placeholders.
-- Configure Neo4j and the vector store only if the current application requires them.
+Never commit API keys, passwords, or private credentials to GitHub.
 
-### 5. Start the backend
+### 5. Start the Backend
 
-From the repository root, a typical FastAPI command is:
+From the project root, try:
 
 ```powershell
 uvicorn main:app --app-dir backend --reload
 ```
 
-If the application object or startup instructions differ, use the command documented in `backend/README.MD`.
+If your FastAPI application uses a different entry point or startup command, follow the instructions in `backend/README.MD`.
 
-### 6. Open the frontend
+### 6. Open the Frontend
 
-Open `frontend/index.html` in a browser, or serve it using the frontend workflow configured by the project. If the page calls the backend, make sure its API base URL matches the local server and that CORS is configured appropriately.
+Open `frontend/index.html` in your browser. If the frontend communicates with the backend, ensure its API URL and the backend CORS settings are configured correctly.
 
 ## Screenshots
 
-Add real screenshots to `docs/images/` and update the paths below. Recommended screenshots:
+Add screenshots to `docs/images/` to demonstrate the application's interface.
 
-| Screenshot | Suggested filename | What it should show |
-|---|---|---|
-| Main interface | `dashboard.png` | The main paper-analysis experience |
-| Claim analysis | `claim-analysis.png` | Extracted claims with evidence or source references |
-| Knowledge graph | `knowledge-graph.png` | Paper and claim nodes connected in Neo4j |
-| Review report | `review-report.png` | Structured findings, checks, and review summary |
+Suggested screenshots:
 
-To add images, create `docs/images/` in the repository and place the screenshot files there. Then commit and push them with Git.
+- `dashboard.png` — Main application interface
+- `claim-analysis.png` — Research claim analysis
+- `knowledge-graph.png` — Graph of papers, claims, and relationships
+- `review-report.png` — Generated review report
 
-## Responsible interpretation
+Once the images are added, embed them using Markdown:
 
-- Generated analysis can be incomplete or incorrect; verify important statements against original papers.
-- Similarity between claims does not automatically mean one supports or contradicts the other.
-- Do not label a connection a “new discovery” until prior work and supporting evidence have been checked.
-- Preserve paper identifiers, citations, and relevant excerpts so findings can be traced back to their sources.
-- Do not upload private manuscripts, copyrighted datasets, API keys, or confidential documents without permission.
+```markdown
+![Application Dashboard](docs/images/dashboard.png)
 
-## Current status
+![Research Knowledge Graph](docs/images/knowledge-graph.png)
+```
 
-This repository contains the backend workflow modules and a lightweight frontend. The live website is linked above. Update this section with the exact features currently deployed, known limitations, and setup instructions verified against your environment.
+## Responsible Use
 
-## Contributing
+- Verify important findings against original research papers.
+- Treat AI-generated claims and relationships as suggestions that require validation.
+- Preserve source references so claims can be traced back to the literature.
+- Do not describe a finding as a novel scientific discovery without checking relevant prior work.
+- Keep API keys, private documents, and confidential research data out of the public repository.
 
-Contributions and suggestions are welcome. For a change, open an issue describing the problem or proposed improvement, then submit a pull request with a concise explanation and relevant tests.
-
-## License
-
-No license is specified here. Add a `LICENSE` file before granting others explicit permission to reuse, modify, or distribute this code.
+##
