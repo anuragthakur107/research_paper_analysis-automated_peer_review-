@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PeerLens — Automated IEEE Review</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--ink:#0d0d0d;--paper:#f5f0e8;--cream:#ede7d9;--rule:#c8bfaa;--accent:#c8400a;--pass:#1a6641;--fail:#b52b2b;--a-color:#1a4d7c;--a-bg:#eaf1f8;--a-border:#a8c4dc;--b-color:#5a2d8c;--b-bg:#f2ecf9;--b-border:#c4a8e0;--c-color:#8a4a10;--c-bg:#fdf3e8;--c-border:#e0c09a}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Instrument Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 31px,var(--rule) 31px,var(--rule) 32px);opacity:.2;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:0 24px 100px}
+header{border-bottom:2.5px solid var(--ink);padding:40px 0 22px;display:flex;align-items:flex-end;justify-content:space-between}
+.logo{font-family:'DM Serif Display',serif;font-size:2.8rem;letter-spacing:-.02em;line-height:1}
+.logo span{color:var(--accent);font-style:italic}
+.tagline{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#888;padding-bottom:6px}
+.upload-section{margin-top:60px}
+.upload-label{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:#777;display:block;margin-bottom:14px}
+.dropzone{border:2px dashed var(--rule);border-radius:3px;background:var(--cream);padding:56px 40px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+.dropzone:hover,.dropzone.drag-over{border-color:var(--accent);background:#f0e8dc}
+.dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:2.8rem;margin-bottom:14px;display:block;opacity:.35}
+.drop-title{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:6px}
+.drop-sub{font-size:.82rem;color:#888;font-family:'DM Mono',monospace}
+.drop-filename{margin-top:14px;font-family:'DM Mono',monospace;font-size:.8rem;color:var(--accent);font-weight:500}
+.btn-review{margin-top:18px;width:100%;padding:16px;background:var(--ink);color:var(--paper);border:none;border-radius:3px;font-family:'DM Mono',monospace;font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s,transform .1s;display:none}
+.btn-review.visible{display:block}
+.btn-review:hover{background:#222;transform:translateY(-1px)}
+.btn-review:disabled{background:#999;cursor:not-allowed;transform:none}
+.processing{display:none;margin-top:48px;text-align:center}
+.processing.visible{display:block}
+.spinner{width:36px;height:36px;border:2px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-label{font-family:'DM Mono',monospace;font-size:.75rem;color:#666;margin-bottom:14px}
+.processing-steps{list-style:none}
+.processing-steps li{font-family:'DM Mono',monospace;font-size:.72rem;color:#aaa;padding:3px 0;transition:color .3s}
+.processing-steps li.active{color:var(--accent)}
+.processing-steps li.done{color:var(--pass)}
+.processing-steps li.done::before{content:'✓  '}
+.processing-steps li.active::before{content:'→  '}
+.processing-steps li:not(.done):not(.active)::before{content:'   '}
+.error-box{display:none;margin-top:28px;padding:18px 22px;border:1.5px solid var(--fail);background:#fdf0f0;border-radius:3px;font-family:'DM Mono',monospace;font-size:.78rem;color:var(--fail)}
+.error-box.visible{display:block}
+#results{display:none;margin-top:60px}
+#results.visible{display:block;animation:fadeUp .45s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.verdict{border:2.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:28px 36px;display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;border-radius:3px}
+.verdict-paper-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:#aaa;margin-bottom:7px}
+.verdict-paper-title{font-family:'DM Serif Display',serif;font-size:1.25rem;line-height:1.3;max-width:540px;color:var(--paper)}
+.verdict-right{text-align:right;flex-shrink:0;padding-left:36px}
+.verdict-badge{font-family:'DM Serif Display',serif;font-size:2.8rem;line-height:1}
+.verdict-badge.pass{color:#6ee09e}
+.verdict-badge.fail{color:#f08080}
+.verdict-score{font-family:'DM Mono',monospace;font-size:.75rem;color:#aaa;margin-top:4px}
+.scores-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:48px}
+.score-pill{padding:18px 20px;border-radius:3px;border:2px solid}
+.score-pill.a{background:var(--a-bg);border-color:var(--a-border)}
+.score-pill.b{background:var(--b-bg);border-color:var(--b-border)}
+.score-pill.c{background:var(--c-bg);border-color:var(--c-border)}
+.score-pill-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.score-pill-label.a{color:var(--a-color)}
+.score-pill-label.b{color:var(--b-color)}
+.score-pill-label.c{color:var(--c-color)}
+.score-pill-num{font-family:'DM Serif Display',serif;font-size:2.2rem;line-height:1;margin-bottom:10px}
+.score-bar-track{height:5px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width 1.1s cubic-bezier(.4,0,.2,1)}
+.score-bar-fill.a{background:var(--a-color)}
+.score-bar-fill.b{background:var(--b-color)}
+.score-bar-fill.c{background:var(--c-color)}
+.score-pill-sub{font-family:'DM Mono',monospace;font-size:.62rem;color:#888;margin-top:7px}
+.node-panel{border-radius:4px;margin-bottom:28px;overflow:hidden;border:2px solid}
+.node-panel.a{border-color:var(--a-border)}
+.node-panel.b{border-color:var(--b-border)}
+.node-panel.c{border-color:var(--c-border)}
+.node-header{padding:18px 24px;display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none}
+.node-panel.a .node-header{background:var(--a-color)}
+.node-panel.b .node-header{background:var(--b-color)}
+.node-panel.c .node-header{background:var(--c-color)}
+.node-badge{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.18);color:#fff;padding:3px 10px;border-radius:2px;flex-shrink:0}
+.node-title{font-family:'DM Serif Display',serif;font-size:1.15rem;color:#fff;flex:1}
+.node-score-chip{font-family:'DM Mono',monospace;font-size:.8rem;color:rgba(255,255,255,.9);background:rgba(255,255,255,.15);padding:4px 14px;border-radius:2px;flex-shrink:0}
+.node-toggle{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.55);flex-shrink:0}
+.node-body{padding:26px 28px}
+.node-panel.a .node-body{background:var(--a-bg)}
+.node-panel.b .node-body{background:var(--b-bg)}
+.node-panel.c .node-body{background:var(--c-bg)}
+.node-body.collapsed{display:none}
+.ref-summary{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--a-color);margin-bottom:18px;padding:10px 14px;background:rgba(26,77,124,.08);border-radius:2px}
+.ref-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.ref-table th{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:7px 10px;border-bottom:2px solid var(--a-border);color:var(--a-color)}
+.ref-table td{padding:8px 10px;border-bottom:1px solid var(--a-border);vertical-align:top;color:#333;line-height:1.4}
+.ref-table tr:last-child td{border-bottom:none}
+.ref-num{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--a-color);white-space:nowrap}
+.vbadge{font-family:'DM Mono',monospace;font-size:.62rem;padding:3px 8px;border-radius:2px;white-space:nowrap}
+.vbadge.v{background:#d6f0e3;color:var(--pass);border:1px solid #9dceb4}
+.vbadge.u{background:#fde0e0;color:var(--fail);border:1px solid #d9a0a0}
+.format-summary{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--b-color);margin-bottom:18px;padding:10px 14px;background:rgba(90,45,140,.08);border-radius:2px}
+.tags-group{margin-bottom:18px}
+.tags-group-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:10px}
+.tag-list{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-family:'DM Mono',monospace;font-size:.68rem;padding:5px 12px;border-radius:2px;border:1.5px solid;line-height:1.3}
+.tag.pass{border-color:var(--pass);color:var(--pass);background:#edf7f2}
+.tag.issue{border-color:var(--fail);color:var(--fail);background:#fdf0f0}
+.format-comment{border-left:3px solid var(--b-border);padding:12px 16px;background:rgba(90,45,140,.05);font-size:.84rem;line-height:1.6;color:#444;font-style:italic;margin-top:16px}
+.dims-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.dim-card{background:#fff;border:1.5px solid var(--c-border);border-radius:3px;padding:16px 18px}
+.dim-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.dim-name{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--c-color)}
+.dim-score{font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--ink)}
+.dim-score span{font-size:.65rem;color:#bbb}
+.dim-bar-track{height:4px;background:var(--c-border);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.dim-bar-fill{height:100%;background:var(--c-color);border-radius:2px;transition:width 1s ease}
+.dim-feedback{font-size:.82rem;color:#444;line-height:1.55}
+.sw-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.sw-block{padding:16px 18px;border-radius:3px}
+.sw-block.s{background:#edf7f2;border:1.5px solid #9dceb4}
+.sw-block.w{background:#fdf0f0;border:1.5px solid #d9a0a0}
+.sw-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#666;margin-bottom:10px}
+.sw-block ul{list-style:none}
+.sw-block ul li{font-size:.82rem;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);color:#333;line-height:1.4}
+.sw-block ul li:last-child{border-bottom:none}
+.sw-block ul li::before{content:'— ';opacity:.4}
+.overall-comment{border-left:3px solid var(--c-border);padding:13px 18px;background:rgba(138,74,16,.05);font-size:.86rem;line-height:1.65;color:#444;font-style:italic;margin-bottom:18px}
+.rec-pill{display:inline-block;font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 20px;border-radius:2px;border:2px solid}
+.rec-pill.accept{background:var(--pass);color:#fff;border-color:var(--pass)}
+.rec-pill.revision{background:#7a5c00;color:#fff;border-color:#7a5c00}
+.rec-pill.reject{background:var(--fail);color:#fff;border-color:var(--fail)}
+footer{border-top:1px solid var(--rule);margin-top:80px;padding:22px 0;font-family:'DM Mono',monospace;font-size:.62rem;color:#bbb;letter-spacing:.06em;display:flex;justify-content:space-between}
+@media(max-width:600px){.scores-row,.dims-grid,.sw-row{grid-template-columns:1fr}.verdict{flex-direction:column;gap:18px}.verdict-right{text-align:left;padding-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">Peer<span>Lens</span></div>
+    <div class="tagline">Automated IEEE Paper Review</div>
+  </header>
+
+  <section class="upload-section">
+    <span class="upload-label">Submit Paper for Review</span>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".pdf"/>
+      <span class="drop-icon">📄</span>
+      <div class="drop-title">Drop your IEEE paper here</div>
+      <div class="drop-sub">or click to browse — PDF only</div>
+      <div class="drop-filename" id="dropFilename"></div>
+    </div>
+    <button class="btn-review" id="btnReview">Run Peer Review →</button>
+  </section>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="processing" id="processing">
+    <div class="spinner"></div>
+    <div class="proc-label">Reviewing your paper — this takes ~30–60 seconds</div>
+    <ul class="processing-steps" id="processingSteps">
+      <li>Extracting text and metadata</li>
+      <li>Node A — verifying citations (ArXiv + Scholar)</li>
+      <li>Node B — checking IEEE formatting rules</li>
+      <li>Node C — running academic review (Groq LLM)</li>
+      <li>Aggregating scores and generating report</li>
+    </ul>
+  </div>
+
+  <div id="results"></div>
+
+  <footer>
+    <span>PeerLens v1.0</span>
+    <span>Groq · LangGraph · ArXiv · SerpAPI</span>
+  </footer>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+
+// ── Elements ──────────────────────────────────────────────────────
+const dropzone     = document.getElementById('dropzone');
+const fileInput    = document.getElementById('fileInput');
+const btnReview    = document.getElementById('btnReview');
+const dropFname    = document.getElementById('dropFilename');
+const errorBox     = document.getElementById('errorBox');
+const processingEl = document.getElementById('processing');
+const resultsEl    = document.getElementById('results');
+let selectedFile   = null;
+
+// ── File selection ────────────────────────────────────────────────
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) selectFile(fileInput.files[0]);
+});
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+});
+
+function selectFile(f) {
+  if (!f.name.toLowerCase().endsWith('.pdf')) { showError('Please select a PDF file.'); return; }
+  selectedFile = f;
+  dropFname.textContent = '📎 ' + f.name;
+  btnReview.classList.add('visible');
+  hideError();
+  resultsEl.classList.remove('visible');
+  resultsEl.innerHTML = '';
+}
+
+// ── Submit ────────────────────────────────────────────────────────
+btnReview.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  btnReview.disabled = true;
+  hideError();
+  processingEl.classList.add('visible');
+  animateSteps();
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+
+  try {
+    const res  = await fetch(`${API_BASE}/review/sync`, { method: 'POST', body: form });
+    const data = await res.json();
+    processingEl.classList.remove('visible');
+    btnReview.disabled = false;
+    if (!res.ok) { showError(data.detail || 'Something went wrong. Check backend terminal.'); return; }
+    renderResults(data.report);
+  } catch (err) {
+    processingEl.classList.remove('visible');
+    btnReview.disabled = false;
+    showError('Cannot connect to backend at ' + API_BASE + ' — is python main.py running?');
+  }
+});
+
+// ── Processing animation ──────────────────────────────────────────
+function animateSteps() {
+  const steps = document.querySelectorAll('#processingSteps li');
+  steps.forEach(s => s.className = '');
+  [0, 3000, 6000, 9000, 20000].forEach((d, i) => {
+    setTimeout(() => {
+      steps.forEach((s, si) => {
+        if (si < i) s.className = 'done';
+        else if (si === i) s.className = 'active';
+        else s.className = '';
+      });
+    }, d);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function showError(msg) { errorBox.textContent = '⚠  ' + msg; errorBox.classList.add('visible'); }
+function hideError()    { errorBox.classList.remove('visible'); }
+function setBar(id, pct) { const el = document.getElementById(id); if (el) el.style.width = Math.min(100,pct)+'%'; }
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Render results ────────────────────────────────────────────────
+function renderResults(r) {
+  resultsEl.innerHTML = buildVerdict(r) + buildScoresRow(r) + buildNodeA(r) + buildNodeB(r) + buildNodeC(r);
+  resultsEl.classList.add('visible');
+
+  requestAnimationFrame(() => setTimeout(() => {
+    setBar('bar-a', r.scores.citations.score  / 30 * 100);
+    setBar('bar-b', r.scores.formatting.score / 30 * 100);
+    setBar('bar-c', r.scores.review.score     / 40 * 100);
+    ['novelty','methodology','clarity','contribution'].forEach(k => {
+      setBar('dim-'+k, (r.review[k+'_score']||0) / 10 * 100);
+    });
+  }, 80));
+
+  resultsEl.querySelectorAll('.node-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const body = h.nextElementSibling;
+      const tog  = h.querySelector('.node-toggle');
+      const c    = body.classList.toggle('collapsed');
+      tog.textContent = c ? '[ + expand ]' : '[ − collapse ]';
+    });
+  });
+
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── HTML builders ─────────────────────────────────────────────────
+function buildVerdict(r) {
+  const p = r.decision === 'PASS';
+  return `<div class="verdict">
+    <div>
+      <div class="verdict-paper-label">Paper Under Review</div>
+      <div class="verdict-paper-title">${esc(r.title)}</div>
+    </div>
+    <div class="verdict-right">
+      <div class="verdict-badge ${p?'pass':'fail'}">${r.decision}</div>
+      <div class="verdict-score">${r.total_score} / 100 &nbsp;·&nbsp; threshold 70</div>
+    </div>
+  </div>`;
+}
+
+function buildScoresRow(r) {
+  return `<div class="scores-row">
+    <div class="score-pill a">
+      <div class="score-pill-label a">Node A — Citations</div>
+      <div class="score-pill-num">${r.scores.citations.score}<span style="font-size:1rem;color:#aaa"> /30</span></div>
+      <div class="score-bar-track"><div class="score-bar-fill a" id="bar-a" style="width:0%"></div></div>
+      <div class="score-pill-sub">${r.citations.verification_rate}% of refs verified</div>
+    </div>
+    <div class="score-pill b">
+      <div class="score-pill-label b">Node B — Formatting</div>
+      <div class="score-pill-num">${r.scores.formatting.score}<span style="font-size:1rem;color:#aaa"> /30</span></div>
+      <div class="score-bar-track"><div class="score-bar-fill b" id="bar-b" style="width:0%"></div></div>
+      <div class="score-pill-sub">${r.formatting.passed.length} rules passed</div>
+    </div>
+    <div class="score-pill c">
+      <div class="score-pill-label c">Node C — Academic</div>
+      <div class="score-pill-num">${r.scores.review.score}<span style="font-size:1rem;color:#aaa"> /40</span></div>
+      <div class="score-bar-track"><div class="score-bar-fill c" id="bar-c" style="width:0%"></div></div>
+      <div class="score-pill-sub">${esc(r.review.recommendation)}</div>
+    </div>
+  </div>`;
+}
+
+function buildNodeA(r) {
+  const c = r.citations;
+  const rows = (c.details||[]).map(d=>`
+    <tr>
+      <td class="ref-num">[${d.number}]</td>
+      <td>${esc(d.raw)}</td>
+      <td><span class="vbadge ${d.verified?'v':'u'}">${d.verified?(d.source||'Verified'):'Not Found'}</span></td>
+    </tr>`).join('');
+  return `<div class="node-panel a">
+    <div class="node-header">
+      <span class="node-badge">Node A</span>
+      <span class="node-title">Citation Verification</span>
+      <span class="node-score-chip">${r.scores.citations.score} / 30</span>
+      <span class="node-toggle">[ − collapse ]</span>
+    </div>
+    <div class="node-body">
+      <div class="ref-summary">${c.verified} of ${c.total_checked} references verified &nbsp;·&nbsp; ${c.verification_rate}% verification rate</div>
+      ${rows?`<table class="ref-table"><thead><tr><th>#</th><th>Reference</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`:'<p style="font-size:.82rem;color:#888">No references found.</p>'}
+    </div>
+  </div>`;
+}
+
+function buildNodeB(r) {
+  const f = r.formatting;
+  const pt = (f.passed||[]).map(p=>`<span class="tag pass">${esc(p)}</span>`).join('');
+  const it = (f.issues ||[]).map(i=>`<span class="tag issue">${esc(i)}</span>`).join('');
+  return `<div class="node-panel b">
+    <div class="node-header">
+      <span class="node-badge">Node B</span>
+      <span class="node-title">IEEE Formatting Check</span>
+      <span class="node-score-chip">${r.scores.formatting.score} / 30</span>
+      <span class="node-toggle">[ − collapse ]</span>
+    </div>
+    <div class="node-body">
+      <div class="format-summary">${f.passed.length} rules passed &nbsp;·&nbsp; ${f.issues.length} issues found</div>
+      ${pt?`<div class="tags-group"><div class="tags-group-label">✓ Passed</div><div class="tag-list">${pt}</div></div>`:''}
+      ${it?`<div class="tags-group"><div class="tags-group-label">✗ Issues</div><div class="tag-list">${it}</div></div>`:''}
+      ${f.overall_comment?`<div class="format-comment">${esc(f.overall_comment)}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function buildNodeC(r) {
+  const rv = r.review;
+  const rc = (rv.recommendation||'').toLowerCase().includes('accept')?'accept':(rv.recommendation||'').toLowerCase().includes('reject')?'reject':'revision';
+  const dims = [
+    ['novelty','Novelty & Originality',rv.novelty_score,rv.novelty_feedback],
+    ['methodology','Methodology & Rigor',rv.methodology_score,rv.methodology_feedback],
+    ['clarity','Clarity & Presentation',rv.clarity_score,rv.clarity_feedback],
+    ['contribution','Contribution & Impact',rv.contribution_score,rv.contribution_feedback],
+  ].map(([k,n,s,f])=>`
+    <div class="dim-card">
+      <div class="dim-top"><div class="dim-name">${n}</div><div class="dim-score">${s}<span> / 10</span></div></div>
+      <div class="dim-bar-track"><div class="dim-bar-fill" id="dim-${k}" style="width:0%"></div></div>
+      <div class="dim-feedback">${esc(f||'—')}</div>
+    </div>`).join('');
+  return `<div class="node-panel c">
+    <div class="node-header">
+      <span class="node-badge">Node C</span>
+      <span class="node-title">Academic Review</span>
+      <span class="node-score-chip">${r.scores.review.score} / 40</span>
+      <span class="node-toggle">[ − collapse ]</span>
+    </div>
+    <div class="node-body">
+      <div class="dims-grid">${dims}</div>
+      <div class="sw-row">
+        <div class="sw-block s"><div class="sw-label">Strengths</div><ul>${(rv.strengths||[]).map(s=>`<li>${esc(s)}</li>`).join('')||'<li>—</li>'}</ul></div>
+        <div class="sw-block w"><div class="sw-label">Weaknesses</div><ul>${(rv.weaknesses||[]).map(w=>`<li>${esc(w)}</li>`).join('')||'<li>—</li>'}</ul></div>
+      </div>
+      ${rv.overall_comment?`<div class="overall-comment">${esc(rv.overall_comment)}</div>`:''}
+      <span class="rec-pill ${rc}">${esc(rv.recommendation)}</span>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
